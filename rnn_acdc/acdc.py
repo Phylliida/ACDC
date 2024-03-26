@@ -66,7 +66,6 @@ def index_into(data, indices):
     # now we can just index, and then view back to our original shape
     return data[first_axis_index, second_axis_index].view(num_data, num_per_data)
 
-
 class ACDCCachedEvalData:
     pass
 
