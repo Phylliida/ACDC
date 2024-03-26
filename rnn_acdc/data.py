@@ -112,6 +112,11 @@ def data_to_tensors(model, data, varying_data_lengths=False, insert_bos=True):
     last_token_position = torch.tensor([len(toks)-1 for toks in data_tokens])
     if varying_data_lengths:
         data_tensor = torch.tensor(add_padding(tokenizer=model.tokenizer, token_lists=data_tokens), device=model.cfg.device)
+        for i, (last_token_patch, last_token_corrupted) in enumerate(zip(last_token_position[::2], last_token_position[1::2])):
+            if last_token_patch != last_token_corrupted:
+                patched = model.to_str_tokens(data_tensor[i*2])
+                corrupted = model.to_str_tokens(data_tensor[i*2+1])
+                raise ValueError(f'Patch {i*2},{i*2+1} has varying input sizes {last_token_patch+1},{last_token_corrupted+1}\ndata {patched}\ncorrupted {corrupted}\nthese should be the same size')
     else:
         try:
             data_tensor = torch.tensor(data_tokens, device=model.cfg.device)
@@ -121,7 +126,7 @@ def data_to_tensors(model, data, varying_data_lengths=False, insert_bos=True):
             for toks in data_tokens:
                 if not len(toks) == typical_len and not varying_data_lengths:
                     print(f'All data points should be the same number of tokens.\nLength of first data point is {typical_len} however length of this data point is {len(toks)}, this data point is\n{model.to_str_tokens(toks)}\nif this is desired, set varying_data_lengths=True')
-            raise
+            raise ValueError("All data points are not the same length (see above printouts)")
     correct_tensor = torch.tensor(add_padding(tokenizer=model.tokenizer, token_lists=correct_tokens), device=model.cfg.device)
     incorrect_tensor = torch.tensor(add_padding(tokenizer=model.tokenizer, token_lists=incorrect_tokens), device=model.cfg.device)
     return data_tensor, last_token_position, correct_tensor, incorrect_tensor
