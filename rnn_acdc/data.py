@@ -9,12 +9,13 @@ def seed_random(seed):
     torch.random.manual_seed(seed)  
     np.random.seed(seed)
 
-
-# because every pair (i,i+1) is a patching (uncorrupted, corrupted),
-# we want things to be symmetric,
-# so we will double up our dataset
-# by swapping each pair
 def repeat_swapped_patch(vec):
+    '''
+    because every pair (i,i+1) is a patching (uncorrupted, corrupted),
+    we want things to be symmetric,
+    so we will double up our dataset
+    by swapping each pair
+    '''
     swapped_vecs = []
     for i in range(0, vec.size()[0], 2):
         swapped_vecs += [vec[i+1:i+2], vec[i:i+1]]
