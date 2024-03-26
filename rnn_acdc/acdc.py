@@ -90,6 +90,7 @@ def cached_property(f):
 @dataclass
 class ACDCDataSubset:
     logits: Float[torch.Tensor, 'batch n_ctx n_vocab']
+    last_token_positions: Float[torch.Tensor, 'batch']
     correct: Float[torch.Tensor, 'batch n_correct']
     incorrect: Float[torch.Tensor, 'batch n_incorrect']
     constrain_to_answers: bool
@@ -101,14 +102,18 @@ class ACDCDataSubset:
         '''
         logits of the correct answers
         '''
-        return index_into(self.logits[:,-1], self.correct)
+        B = self.logits.size()[0]
+        # [torch.arange(B), self.last_token_positions] gets the logits at the last position (the arange is just an indexing thing)
+        # that's needed because some inputs might be of varying sizes with pad tokens at the end
+        return index_into(self.logits[torch.arange(B), self.last_token_positions], self.correct)
     
     @cached_property
     def incorrect_logits(self) -> Float[torch.Tensor, 'batch n_incorrect']:
         '''
         logits of the incorrect answers
         '''
-        return index_into(self.logits[:,-1], self.incorrect)
+        B = self.logits.size()[0]
+        return index_into(self.logits[torch.arange(B), self.last_token_positions], self.incorrect)
 
     @cached_property
     def correct_prs(self) -> Float[torch.Tensor, 'batch n_correct']:
@@ -191,6 +196,7 @@ class ACDCDataSubset:
 @dataclass
 class ACDCEvalData:
     logits_all_batches: Float[torch.Tensor, 'all_data_size ctx_len vocab_size']
+    last_token_positions_all_batches: Float[torch.tensor, 'all_data_size']
     correct_all_batches: Float[torch.Tensor, 'all_data_size n_correct']
     incorrect_all_batches: Float[torch.Tensor, 'all_data_batch n_incorrect']
     batch_start: int = None
@@ -209,12 +215,14 @@ class ACDCEvalData:
         del self.corrupted
         self.patched = ACDCDataSubset(
             logits=self.logits_all_batches[::2][self.batch_start:self.batch_end],
+            last_token_positions=self.last_token_positions_all_batches[::2][self.batch_start:self.batch_end]
             correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
         )
         self.corrupted = ACDCDataSubset(
             logits=self.logits_all_batches[1::2][self.batch_start:self.batch_end],
+            last_token_positions=self.last_token_positions_all_batches[1::2][self.batch_start:self.batch_end]
             correct=self.correct_all_batches[1::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[1::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
@@ -266,9 +274,11 @@ class ACDCConfig:
 @dataclass
 class ACDCDataset:
     data: Float[torch.Tensor, "batch context_len"]
+    last_token_position: Float[torch.tensor, "batch"]
     correct: Float[torch.Tensor, "batch num_correct_answers"]
     incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     valid_data: Float[torch.Tensor, "batch context_len"]
+    valid_last_token_position: Float[torch.tensor, "batch"]
     valid_correct: Float[torch.Tensor, "batch num_correct_answers"]
     valid_incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     constrain_to_answers: bool
