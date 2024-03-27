@@ -200,7 +200,7 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
                 format = line[:-1]
                 prompt = insert_entities(text=template, format=format)
                 prompts.append(prompt) 
-        all_answers = set(tok_map.values())
+        all_answers = set([" " + name for name in tok_map.values()])
         for prompt, answer in zip(prompts, answers):
             correct = [answer]
             # all possible other answers are the incorrect options
