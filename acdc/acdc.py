@@ -290,16 +290,33 @@ class ACDCDataset:
     valid_incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     constrain_to_answers: bool
 
-    def eval(self, model, valid=False):
+    def eval(self, model, batch_size, valid=False, metric=accuracy_metric):
         if valid:
-            eval_acdc(model=model,
-                      data=self.data,
-                      last_token_position=self.last_token_position,
-                      correct=self.correct,
-                      incorrect=self.incorrect,
-                      metric=accuracy_metric,
-                      num_edges=1,
-                      constrain_to_answers=self.constrain_to_answers)
+            data = self.valid_data
+            last_token_position = self.valid_last_token_position
+            correct = self.valid_correct
+            incorrect = self.valid_incorrect
+        else:
+            data = self.data
+            last_token_position = self.last_token_position
+            correct = self.correct
+            incorrect = self.incorrect
+
+        scores = []
+        n_data, ctx_len = data.size()
+        for batch_start in range(0, n_data, batch_size):
+            batch_end = min(n_data, batch_start+batch_size)
+            cur_batch_size = batch_end-batch_start
+            batch_scores = eval_acdc(model=model,
+                    data=data[batch_start:batch_end],
+                    last_token_position=last_token_position[batch_start:batch_end],
+                    correct=correct[batch_start:batch_end],
+                    incorrect=incorrect[batch_start:batch_end],
+                    metric=accuracy_metric,
+                    num_edges=cur_batch_size//2,
+                    constrain_to_answers=self.constrain_to_answers)
+            scores.append(batch_scores)
+        return torch.cat(scores, dim=0)
 
 @dataclass
 class Edge:
