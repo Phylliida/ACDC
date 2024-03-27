@@ -75,12 +75,12 @@ def generate_dataset(model,
     '''
     seed_random(seed=seed)
     data, last_token_position, correct, incorrect = data_to_tensors(model=model,
-                                                                    data=data_generator(model=model, num_patching_pairs=num_patching_pairs, **kwargs),
+                                                                    data=data_generator(tokenizer=model.tokenizer, num_patching_pairs=num_patching_pairs, **kwargs),
                                                                     varying_data_lengths=varying_data_lengths,
                                                                     insert_bos=insert_bos)
     seed_random(seed=valid_seed)
     valid_data, valid_last_token_position, valid_correct, valid_incorrect = data_to_tensors(model=model,
-                                                                                            data=data_generator(model=model, num_patching_pairs=num_patching_pairs, **kwargs),
+                                                                                            data=data_generator(tokenizer=model.tokenizer, num_patching_pairs=num_patching_pairs, **kwargs),
                                                                                             varying_data_lengths=varying_data_lengths,
                                                                                             insert_bos=insert_bos)
     if has_symmetric_patching:
@@ -125,8 +125,6 @@ def data_to_tensors(model, data, varying_data_lengths=False, insert_bos=True):
         bos = []
     
     for i, (prompt, corrects, incorrects) in enumerate(data):
-        if i < 7:
-            print(prompt, corrects, incorrects)
         data_tokens.append(bos + model.tokenizer.encode(prompt))
         correct_tokens.append([model.tokenizer.encode(correct)[0] for correct in corrects])
         incorrect_tokens.append([model.tokenizer.encode(incorrect)[0] for incorrect in incorrects])
@@ -142,13 +140,13 @@ def data_to_tensors(model, data, varying_data_lengths=False, insert_bos=True):
     else:
         try:
             data_tensor = torch.tensor(data_tokens, device=model.cfg.device)
-        except RuntimeError: # thrown if batched_data can't be made a tensor because varying sizes
+        except ValueError: # thrown if batched_data can't be made a tensor because varying sizes
             typical_len = len(data_tokens[0])
-            print(f"first data point is\n{model.to_str_tokens(data_tokens[0])}")
+            print(f"first data point is\n{model.to_str_tokens(torch.tensor(data_tokens[0]))}")
             for toks in data_tokens:
                 if not len(toks) == typical_len and not varying_data_lengths:
-                    print(f'All data points should be the same number of tokens.\nLength of first data point is {typical_len} however length of this data point is {len(toks)}, this data point is\n{model.to_str_tokens(toks)}\nif this is desired, set varying_data_lengths=True')
-            raise ValueError("All data points are not the same length (see above printouts)")
+                    print(f'Error: All data points should be the same number of tokens.\nLength of first data point is {typical_len} however length of this data point is {len(toks)}, this data point is\n{model.to_str_tokens(torch.tensor(toks))}\nif this is desired, set varying_data_lengths=True')
+            raise ValueError("Erorr: All data points are not the same length (see above printouts)")
     correct_tensor = torch.tensor(add_padding(tokenizer=model.tokenizer, token_lists=correct_tokens), device=model.cfg.device)
     incorrect_tensor = torch.tensor(add_padding(tokenizer=model.tokenizer, token_lists=incorrect_tokens), device=model.cfg.device)
     return data_tensor, last_token_position, correct_tensor, incorrect_tensor

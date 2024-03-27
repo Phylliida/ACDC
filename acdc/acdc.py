@@ -90,7 +90,7 @@ def cached_property(f):
 @dataclass
 class ACDCDataSubset:
     logits: Float[torch.Tensor, 'batch n_ctx n_vocab']
-    last_token_positions: Float[torch.Tensor, 'batch']
+    last_token_position: Float[torch.Tensor, 'batch']
     correct: Float[torch.Tensor, 'batch n_correct']
     incorrect: Float[torch.Tensor, 'batch n_incorrect']
     constrain_to_answers: bool
@@ -103,9 +103,9 @@ class ACDCDataSubset:
         logits of the correct answers
         '''
         B = self.logits.size()[0]
-        # [torch.arange(B), self.last_token_positions] gets the logits at the last position (the arange is just an indexing thing)
+        # [torch.arange(B), self.last_token_position] gets the logits at the last position (the arange is just an indexing thing)
         # that's needed because some inputs might be of varying sizes with pad tokens at the end
-        return index_into(self.logits[torch.arange(B), self.last_token_positions], self.correct)
+        return index_into(self.logits[torch.arange(B), self.last_token_position], self.correct)
     
     @cached_property
     def incorrect_logits(self) -> Float[torch.Tensor, 'batch n_incorrect']:
@@ -113,7 +113,7 @@ class ACDCDataSubset:
         logits of the incorrect answers
         '''
         B = self.logits.size()[0]
-        return index_into(self.logits[torch.arange(B), self.last_token_positions], self.incorrect)
+        return index_into(self.logits[torch.arange(B), self.last_token_position], self.incorrect)
 
     @cached_property
     def correct_prs(self) -> Float[torch.Tensor, 'batch n_correct']:
@@ -196,7 +196,7 @@ class ACDCDataSubset:
 @dataclass
 class ACDCEvalData:
     logits_all_batches: Float[torch.Tensor, 'all_data_size ctx_len vocab_size']
-    last_token_positions_all_batches: Float[torch.Tensor, 'all_data_size']
+    last_token_position_all_batches: Float[torch.Tensor, 'all_data_size']
     correct_all_batches: Float[torch.Tensor, 'all_data_size n_correct']
     incorrect_all_batches: Float[torch.Tensor, 'all_data_batch n_incorrect']
     constrain_to_answers: bool
@@ -215,20 +215,21 @@ class ACDCEvalData:
         del self.corrupted
         self.patched = ACDCDataSubset(
             logits=self.logits_all_batches[::2][self.batch_start:self.batch_end],
-            last_token_positions=self.last_token_positions_all_batches[::2][self.batch_start:self.batch_end],
+            last_token_position=self.last_token_position_all_batches[::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
         )
         self.corrupted = ACDCDataSubset(
             logits=self.logits_all_batches[1::2][self.batch_start:self.batch_end],
-            last_token_positions=self.last_token_positions_all_batches[1::2][self.batch_start:self.batch_end],
+            last_token_position=self.last_token_position_all_batches[1::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[1::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[1::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
         )
-    
-def eval_acdc(model, data, correct, incorrect, metric, num_edges, constrain_to_answers, **kwargs):
+
+
+def eval_acdc(model, data, last_token_position, correct, incorrect, metric, num_edges, constrain_to_answers, **kwargs):
     '''
     Internal function,
     evaluates model on the data, using metric,
@@ -243,6 +244,7 @@ def eval_acdc(model, data, correct, incorrect, metric, num_edges, constrain_to_a
 
     data = ACDCEvalData(
         logits_all_batches=logits,
+        last_token_position_all_batches=last_token_position,
         correct_all_batches=correct,
         incorrect_all_batches=incorrect,
         constrain_to_answers=constrain_to_answers)
@@ -287,6 +289,17 @@ class ACDCDataset:
     valid_correct: Float[torch.Tensor, "batch num_correct_answers"]
     valid_incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     constrain_to_answers: bool
+
+    def eval(self, model, valid=False):
+        if valid:
+            eval_acdc(model=model,
+                      data=self.data,
+                      last_token_position=self.last_token_position,
+                      correct=self.correct,
+                      incorrect=self.incorrect,
+                      metric=accuracy_metric,
+                      num_edges=1,
+                      constrain_to_answers=self.constrain_to_answers)
 
 @dataclass
 class Edge:
@@ -673,6 +686,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
         return eval_acdc(
             model=wrap_run_with_hooks(model=model, fwd_hooks=currently_patched_edge_hooks, **cfg.model_kwargs),
             data=data.data,
+            last_token_position=data.last_token_position,
             correct=data.correct,
             incorrect=data.incorrect,
             metric=cfg.metric,
@@ -780,6 +794,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
                     else: return torch.cat([data]*n_edges, dim=0)
                 
                 pbatched_data_edges = stack_data_for_each_edge(data.data, n_edges=batch_size)
+                pbatched_last_token_position_edges = stack_data_for_each_edge(data.last_token_position, n_edges=batch_size)
                 pbatched_correct_edges = stack_data_for_each_edge(data.correct, n_edges=batch_size)
                 pbatched_incorrect_edges = stack_data_for_each_edge(data.incorrect, n_edges=batch_size)
                 
@@ -802,6 +817,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
                 scores = eval_acdc(
                     model=wrap_run_with_hooks(model=model, fwd_hooks=hooks, **cfg.model_kwargs),
                     data=pbatched_data_edges,
+                    last_token_position=pbatched_last_token_position_edges,
                     correct=pbatched_correct_edges,
                     incorrect=pbatched_incorrect_edges,
                     metric=cfg.metric,
@@ -905,6 +921,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
         valid_score = eval_acdc(
                         model=wrap_run_with_hooks(model=model, fwd_hooks=hooks, **cfg.model_kwargs),
                         data=data.valid_data,
+                        last_token_position=data.valid_last_token_position,
                         correct=data.valid_correct,
                         incorrect=data.valid_incorrect,
                         metric=cfg.metric,
@@ -928,6 +945,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     baseline_score = eval_acdc(
                 model=wrap_run_with_hooks(model=model, fwd_hooks=patching_hooks, **cfg.model_kwargs),
                 data=data.data,
+                last_token_position=data.last_token_position,
                 correct=data.correct,
                 incorrect=data.incorrect,
                 metric=cfg.metric,

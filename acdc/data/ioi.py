@@ -95,6 +95,29 @@ OBJECTS = [
 
 NOUNS_DICT = {"[PLACE]": PLACES, "[OBJECT]": OBJECTS}
 
+interventions = """
+CAB AB C
+DAB AB D
+-
+ACB AB C
+ADB AB D
+-
+ABC AB C
+ABD AB D
+-
+ABC AB C
+ABC AC B
+-
+ABC AC B
+ABC BC A
+"""
+
+def get_all_single_name_abc_patching_formats():
+    lines = [x for x in interventions.split("\n") if len(x) == 8]
+    for i in range(0, len(lines), 2):
+        abc_format = lines[i] + "\n" + lines[i+1]
+        yield abc_format
+
 def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_formats):
     '''
     templates should be from the templates above
@@ -127,10 +150,7 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
     global good_names
     global good_nouns
     if not 'good_names' in globals() or good_names is None:
-        with open("first-names.txt", "r") as f:
-            names = [x.strip() for x in f.read().split("\n") if len(x.strip()) > 0]
-            
-        names = restrict_to_most_common_size(tokenizer, names, with_space=True, force_size=1)
+        names = restrict_to_most_common_size(tokenizer, NAMES, with_space=True, force_size=1)
 
         # stuff like "chris" and "christine" get confused, ignore them
         no_prefix_names = []
