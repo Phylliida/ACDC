@@ -9,6 +9,17 @@ def decode_and_encode(tokenizer, tokens):
     return tokenizer.encode(prompt)
 
 def copy_data_generator(tokenizer, num_patching_pairs, copy_seq_len):
+    '''
+    Generates copy_seq_len random tokens, repeated twice (with the last token cut off)
+    This is just a test to see if it can copy the repeated sequence from before
+
+    for example, 
+
+    uncorrupted:
+    a b c d a b c (answer is d)
+    corrupted:
+    a b c e a b c (answer is e)
+    '''
     first_len = None
     for i in range(num_patching_pairs):
         while True:

@@ -33,6 +33,22 @@ NOUNS = [
 ]
 
 def greater_than_data_generator(tokenizer, num_patching_pairs):
+    '''
+    Examples:
+    
+    uncorrupted:
+    The tradition lasted from the year 1955 to 19 (answer is anything from 55-99)
+    corrupted:
+    The tradition lasted from the year 1900 to 19 (answer is anything from 00-99)
+
+    The base task is simply to output a digit that is greater than 55,
+    the corrupted task puts the lowest possible year (or sometimes 01 or 02 if it doesn't tokenize cleanly),
+    making any output valid for the corrputed task
+
+    In practice, I find that if you constrain to only letting the network output two letter digits,
+    it is too easy, and ACDC finds subnetworks that output 99 all the time.
+    So it's important to have constrain_to_answers=False
+    '''
     YEARS = []
     DECADES = []
     for i in range(100):
