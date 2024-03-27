@@ -1,4 +1,4 @@
-# RNN-ACDC
-ACDC (Automated Circuit Discovery) for RNNs. Right now just Mamba
+# ACDC
+ACDC (Automated Circuit Discovery) alternative implementation.
 
 (under construction)
