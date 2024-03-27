@@ -10,6 +10,8 @@ from transformer_lens.hook_points import HookPoint
 import networkx as nx
 import graphviz
 from tqdm.notebook import tqdm
+import datetime
+from pathlib import Path
 
 def hook_was_added_by_hookpoint(hook):
     return "HookPoint." in str(repr(hook))
@@ -277,11 +279,12 @@ class ACDCConfig:
     batched: bool = True
     recursive: bool = True
     try_patching_multiple_at_same_time: bool = True
-    layers: List[int] = field(default_factory=lambda: None)
     model_kwargs: Dict = field(default_factory=lambda: {})
     log_level: str = 'info' # can be 'debug', 'info', 'none', or 'all'
     auto_hide_unused_default_edges: bool = True # edges with None for input and output hook will always be visible, this helps reduce clutter by hiding them if they have no path through them to output or through them to input
     merge_positions_in_graph_display: bool = True # if you have seperate edges 1,2,3,5,6 going from node A to node B, this will visually display them as a single edge labeled 1-3,5-6
+    ckpt_directory: str = field(default_factory=lambda: f'ckpts/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
+
 
 @dataclass
 class ACDCDataset:
@@ -700,6 +703,11 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     # this is useful because sometimes if you spam ctrl-c too many times some hooks will stay around
     clean_hooks(model)
 
+    # make the folder for the checkpoints
+    Path(cfg.ckpt_directory).mkdir(parents=True, exist_ok=True)
+    def get_ckpt_path(file_name):
+        return str(Path(cfg.ckpt_directory) / file_name)
+
     if not cfg.batched and cfg.batch_size > 1:
         raise ValueError(f"cfg.batched is False, so cfg.batch_size needs to be 1, instead it is {cfg.batch_size}")
     
@@ -714,11 +722,6 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
             metric=cfg.metric,
             num_edges=1,
             constrain_to_answers=data.constrain_to_answers)[0].item()
-    
-    # if we aren't given a set of limited layers, run on all layers
-    limited_layers = cfg.layers
-    if limited_layers is None:
-        limited_layers = list(range(model.cfg.n_layers))
     
     # get all the nodes
     all_node_names = set()
@@ -952,7 +955,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
         if cfg.log_level in INFO_LEVELS:
             print(f"valid score {valid_score}")
             draw_graphviz_graph(cfg=cfg, edges=edges)
-        ckpt_path = f"checkpoint {iters}.pkl"
+        ckpt_path = get_ckpt_path(f"checkpoint {iters}.pkl")
         save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
         if cfg.log_level in INFO_LEVELS:
             print(f"saved to checkpoint {ckpt_path}")
@@ -977,7 +980,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     if cfg.log_level in INFO_LEVELS:
         print("final score", baseline_score)
     
-    ckpt_path = f"checkpoint final.pkl"
+    ckpt_path = get_ckpt_path(f"checkpoint final.pkl")
     save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
     if cfg.log_level in INFO_LEVELS:
         print(f"saved to checkpoint {ckpt_path}")
