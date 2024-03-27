@@ -188,14 +188,13 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
             text = text.replace("[PLACE]", place)
             text = text.replace("[OBJECT]", object)
             return text
-        all_answers = [' ' + x for x in tok_map.values()]
         prompts = []
         answers = []
         for line in patching_format.split("\n"):
             line = line.replace(" ", "")
             if len(line) > 0:
                 answer = line[-1] # last is the answer
-                answers.append(tok_map[answer])
+                answers.append(" " + tok_map[answer])
 
                 # rest are the format
                 format = line[:-1]
