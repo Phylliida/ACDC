@@ -50,7 +50,7 @@ def generate_dataset(model,
                   constrain_to_answers: bool,
                   has_symmetric_patching: bool=False, 
                   varying_data_lengths=False,
-                  insert_bos=False,
+                  insert_bos=True,
                   **kwargs):
     '''
     Given a data_generator and num_examples, generates a ACDCDataset
