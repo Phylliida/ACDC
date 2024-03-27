@@ -398,18 +398,16 @@ def strip_to_first_token(tokenizer, s):
         raise Exception(f"when turned into single token {s} becomes only whitespace")
     return res
     
-def docstring_data_generator(tokenizer, num_patching_pairs):
+def docstring_data_generator(tokenizer, num_patching_pairs, docstring_ind_prompt_kwargs=None):
     '''
     
     uncorrupted:
-    
 
-    
-    
     '''
-    docstring_ind_prompt_kwargs = dict(
-        n_matching_args=3, n_def_prefix_args=2, n_def_suffix_args=1, n_doc_prefix_args=0, met_desc_len=3, arg_desc_len=2
-    )
+    if docstring_ind_prompt_kwargs is None:
+        docstring_ind_prompt_kwargs = dict(
+            n_matching_args=3, n_def_prefix_args=2, n_def_suffix_args=1, n_doc_prefix_args=0, met_desc_len=3, arg_desc_len=2
+        )
 
     raw_prompts = []
 
