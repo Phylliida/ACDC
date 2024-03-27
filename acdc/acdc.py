@@ -89,6 +89,7 @@ def cached_property(f):
 
 @dataclass
 class ACDCDataSubset:
+    data: Float[torch.Tensor, 'batch n_ctx']
     logits: Float[torch.Tensor, 'batch n_ctx n_vocab']
     last_token_position: Float[torch.Tensor, 'batch']
     correct: Float[torch.Tensor, 'batch n_correct']
@@ -195,7 +196,8 @@ class ACDCDataSubset:
 
 @dataclass
 class ACDCEvalData:
-    logits_all_batches: Float[torch.Tensor, 'all_data_size ctx_len vocab_size']
+    logits_all_batches: Float[torch.Tensor, 'all_data_size n_ctx n_vocab']
+    data_all_batches: Float[torch.Tensor, 'all_data_size n_ctx']
     last_token_position_all_batches: Float[torch.Tensor, 'all_data_size']
     correct_all_batches: Float[torch.Tensor, 'all_data_size n_correct']
     incorrect_all_batches: Float[torch.Tensor, 'all_data_batch n_incorrect']
@@ -214,6 +216,7 @@ class ACDCEvalData:
         del self.patched
         del self.corrupted
         self.patched = ACDCDataSubset(
+            data=self.data_all_batches[::2][self.batch_start:self.batch_end],
             logits=self.logits_all_batches[::2][self.batch_start:self.batch_end],
             last_token_position=self.last_token_position_all_batches[::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
@@ -221,6 +224,7 @@ class ACDCEvalData:
             constrain_to_answers=self.constrain_to_answers,
         )
         self.corrupted = ACDCDataSubset(
+            data=self.data_all_batches[1::2][self.batch_start:self.batch_end],
             logits=self.logits_all_batches[1::2][self.batch_start:self.batch_end],
             last_token_position=self.last_token_position_all_batches[1::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[1::2][self.batch_start:self.batch_end],
@@ -244,6 +248,7 @@ def eval_acdc(model, data, last_token_position, correct, incorrect, metric, num_
 
     data = ACDCEvalData(
         logits_all_batches=logits,
+        data_all_batches=data,
         last_token_position_all_batches=last_token_position,
         correct_all_batches=correct,
         incorrect_all_batches=incorrect,
@@ -312,7 +317,7 @@ class ACDCDataset:
                     last_token_position=last_token_position[batch_start:batch_end],
                     correct=correct[batch_start:batch_end],
                     incorrect=incorrect[batch_start:batch_end],
-                    metric=accuracy_metric,
+                    metric=metric,
                     num_edges=cur_batch_size//2,
                     constrain_to_answers=self.constrain_to_answers)
             scores.append(batch_scores)

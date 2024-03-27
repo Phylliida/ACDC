@@ -158,17 +158,18 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
             has_other_as_prefix = any([other.startswith(name) and other != name for other in names])
             if not has_other_as_prefix:
                 no_prefix_names.append(name)
-            else:
-                other_prefix = names[[other.startswith(name) and other != name for other in names].index(True)]
+            #else:
+            #    other_prefix = names[[other.startswith(name) and other != name for other in names].index(True)]
         names = no_prefix_names
         good_names = sorted(names)
-        
+        print("names", good_names)
 
         noun_dict = {}
         for k,v in NOUNS_DICT.items():
             noun_dict[k] = sorted(restrict_to_most_common_size(tokenizer, v, with_space=True))
         good_nouns = noun_dict
         
+    good_names = sorted(good_names)
     for n in range(num_patching_pairs):
         template = random.choice(templates) 
         patching_format = random.choice(patching_formats)   
@@ -204,7 +205,7 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
         for prompt, answer in zip(prompts, answers):
             correct = [answer]
             # all possible other answers are the incorrect options
-            incorrect = sorted(list(all_answers - set(answer)))
+            incorrect = sorted(list(all_answers - set([answer])))
             yield prompt, correct, incorrect
 
 # names from https://www.ssa.gov/oact/babynames/decades/names2000s.html
