@@ -23,7 +23,7 @@ def repeat_swapped_patch(vec):
 
 def generate_dataset(model,
                   data_generator,
-                  num_examples: int,
+                  num_patching_pairs: int,
                   seed: int,
                   valid_seed: int,
                   constrain_to_answers: bool,
@@ -54,12 +54,12 @@ def generate_dataset(model,
     '''
     seed_random(seed=seed)
     data, last_token_position, correct, incorrect = data_to_tensors(model=model,
-                                                                    data=data_generator(model=model, num_examples=num_examples, **kwargs),
+                                                                    data=data_generator(model=model, num_patching_pairs=num_patching_pairs, **kwargs),
                                                                     varying_data_lengths=varying_data_lengths,
                                                                     insert_bos=insert_bos)
     seed_random(seed=valid_seed)
     valid_data, valid_last_token_position, valid_correct, valid_incorrect = data_to_tensors(model=model,
-                                                                                            data=data_generator(model=model, num_examples=num_examples, **kwargs),
+                                                                                            data=data_generator(model=model, num_patching_pairs=num_patching_pairs, **kwargs),
                                                                                             varying_data_lengths=varying_data_lengths,
                                                                                             insert_bos=insert_bos)
     if has_symmetric_patching:
