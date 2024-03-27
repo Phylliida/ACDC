@@ -196,12 +196,12 @@ class ACDCDataSubset:
 @dataclass
 class ACDCEvalData:
     logits_all_batches: Float[torch.Tensor, 'all_data_size ctx_len vocab_size']
-    last_token_positions_all_batches: Float[torch.tensor, 'all_data_size']
+    last_token_positions_all_batches: Float[torch.Tensor, 'all_data_size']
     correct_all_batches: Float[torch.Tensor, 'all_data_size n_correct']
     incorrect_all_batches: Float[torch.Tensor, 'all_data_batch n_incorrect']
+    constrain_to_answers: bool
     batch_start: int = None
     batch_end: int = None
-    constrain_to_answers: bool
     patched: ACDCDataSubset = field(default_factory=lambda: None)
     corrupted: ACDCDataSubset = field(default_factory=lambda: None)
     
@@ -215,14 +215,14 @@ class ACDCEvalData:
         del self.corrupted
         self.patched = ACDCDataSubset(
             logits=self.logits_all_batches[::2][self.batch_start:self.batch_end],
-            last_token_positions=self.last_token_positions_all_batches[::2][self.batch_start:self.batch_end]
+            last_token_positions=self.last_token_positions_all_batches[::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
         )
         self.corrupted = ACDCDataSubset(
             logits=self.logits_all_batches[1::2][self.batch_start:self.batch_end],
-            last_token_positions=self.last_token_positions_all_batches[1::2][self.batch_start:self.batch_end]
+            last_token_positions=self.last_token_positions_all_batches[1::2][self.batch_start:self.batch_end],
             correct=self.correct_all_batches[1::2][self.batch_start:self.batch_end],
             incorrect=self.incorrect_all_batches[1::2][self.batch_start:self.batch_end],
             constrain_to_answers=self.constrain_to_answers,
@@ -279,11 +279,11 @@ class ACDCConfig:
 @dataclass
 class ACDCDataset:
     data: Float[torch.Tensor, "batch context_len"]
-    last_token_position: Float[torch.tensor, "batch"]
+    last_token_position: Float[torch.Tensor, "batch"]
     correct: Float[torch.Tensor, "batch num_correct_answers"]
     incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     valid_data: Float[torch.Tensor, "batch context_len"]
-    valid_last_token_position: Float[torch.tensor, "batch"]
+    valid_last_token_position: Float[torch.Tensor, "batch"]
     valid_correct: Float[torch.Tensor, "batch num_correct_answers"]
     valid_incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     constrain_to_answers: bool
