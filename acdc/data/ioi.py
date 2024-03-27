@@ -162,7 +162,6 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
             #    other_prefix = names[[other.startswith(name) and other != name for other in names].index(True)]
         names = no_prefix_names
         good_names = sorted(names)
-        print("names", good_names)
 
         noun_dict = {}
         for k,v in NOUNS_DICT.items():
