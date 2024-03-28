@@ -210,7 +210,7 @@ In this case, the `input_hook_name` or `output_hook_name` parameters would be li
 
 # ACDC Config
 
-Now that you have an `ACDCDataset` and a list of `Edge`, you can create an ACDCConfig:
+There are many settings to configure your ACDC:
 
 ```python
 cfg = ACDCConfig(
@@ -285,7 +285,16 @@ class ACDCDataSubset:
     top_is_correct: Float[torch.Tensor, 'batch']
 ```
 
+# Running ACDC
 
+Now that you have finished the above steps, you can run ACDC!
 
+```python
+from acdc import run_acdc
+# edges is a list of [Edges]
+# data is your ACDCDataset
+# cfg is your ACDCConfig
+result_edges = run_acdc(model=model, data=data, cfg=cfg, edges=edges)
+```
 
 
