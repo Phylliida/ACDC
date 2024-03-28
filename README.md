@@ -109,7 +109,7 @@ sense, so it's useful to be warned about this and have to enable it manually.
 # Edges
 
 To run an ACDC run, you need to specify all of the edges that might be patched. Edges look like this
-```
+```python
 from acdc import Edge
 
 i = 3
@@ -176,7 +176,7 @@ Looking at what they are doing:
 
 In `resid_patching_hook`, this line is the important bit:
 
-```
+```python
 x_uncorrupted = storage[input_hook_name][batch_start:batch_end:2]
 x_corrupted = storage[input_hook_name][batch_start+1:batch_end:2]
 ```    
@@ -185,7 +185,7 @@ Because our data comes in pairs (patching, corrupted), this retreives every even
 
 Now we can do
 
-```
+```python
 x[batch_start:batch_end:2] = x[batch_start:batch_end:2] - x_uncorrupted + x_corrupted
 ```
 
