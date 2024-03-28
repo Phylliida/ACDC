@@ -50,7 +50,7 @@ This means that we will patch in data[1]'s activations into data[0].
 
 If you don't want to bother with tokenization and padding, there's a utility function
 
-```
+```python
 from acdc.data.utils import generate_dataset
 ```
 
@@ -268,6 +268,9 @@ class ACDCDataSubset:
     constrain_to_answers: bool
     # the logits of the final token
     logits: Float[torch.Tensor, 'batch n_vocab']
+    ## you can access all variables below just like any other variable,
+    ## however because they can be expensive they are lazily loaded
+    ## (only computed once you fetch them)
     # logits of correct answers
     correct_logits: Float[torch.Tensor, 'batch n_correct']
     # logits of incorrect answers
