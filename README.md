@@ -168,7 +168,7 @@ You can see some extra parameters provided to these hooks:
 
 `output_hook_name` and `input_hook_name` are the corresponding names of the other side of the edge, which are frequently needed so I provide them.
 
-`batch_start` and `batch_end` are important because this library runs things in a batched manner, duplicating your dataset `batch_size` number of times and running a single forward pass. If you don't want to bother with these, you can see batched=False in your ACDCConfig (see below).
+`batch_start` and `batch_end` are important because this library runs things in a batched manner, duplicating your dataset `batch_size` number of times and running a single forward pass. If you don't want to bother with these, you can see `batched=False` in your `ACDCConfig` (see below) and then `batch_start` and `batch_end` will not be provided.
 
 Looking at what they are doing:
 
