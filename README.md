@@ -54,7 +54,7 @@ If you don't want to bother with tokenization and padding, there's a utility fun
 from acdc.data.utils import generate_dataset
 ```
 
-Here's it's doc:
+Here's its doc:
 
 ```python
 def generate_dataset(model, # your model, should have a .tokenizer property
