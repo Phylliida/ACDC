@@ -34,7 +34,7 @@ ACDCDataset:
     constrain_to_answers: bool
 ```
 
-data is expected to be provided in pairs (0 and 1, 2 and 3, 4 and 5, etc.) where each pair corresponds to
+data is expected to be provided in pairs ((0,1), (2,3), (4, 5), etc.) where each pair corresponds to
 
 (uncorrupted, corrupted)
 
@@ -49,6 +49,12 @@ and data[1] would be
 This means that we will patch in data[1]'s activations into data[0].
 
 If you don't want to bother with tokenization and padding, there's a utility function
+
+```
+from acdc.data.utils import generate_dataset
+```
+
+Here's it's doc:
 
 ```python
 def generate_dataset(model, # your model, should have a .tokenizer property
@@ -65,7 +71,7 @@ def generate_dataset(model, # your model, should have a .tokenizer property
 
 this expects a data_generator that looks something like this
 
-```
+```python
 def simple_data_generator(tokenizer, num_patching_pairs):
     for pair in range(num_patching_pairs):
         # generate data
