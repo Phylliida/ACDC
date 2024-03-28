@@ -129,7 +129,7 @@ edge = Edge(
 `input_node` and `output_node` are strings, and are the nodes this edge goes between.
 These can be arbitrary string labels, and this library will hook up any edges with matching node names.
 
-`input_hook` and `output_hook` are both tuples of (hook_name, hook_func) like you might see in [TransformerLens](https://github.com/neelnanda-io/TransformerLens).
+`input_hook` and `output_hook` are both tuples of `(hook_name, hook_func)` like you might see in [TransformerLens](https://github.com/neelnanda-io/TransformerLens).
 The `hook_name` is the name of a `TransformerLens` hook, while the `hook_func` is the function that'll be called.
 These hooks will be called whenever that edge is considered "patched", so you should write code accordingly.
 
