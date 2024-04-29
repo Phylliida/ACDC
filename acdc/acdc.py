@@ -685,7 +685,7 @@ def get_most_recent_checkpoint(checkpoint_dir: str):
     sorted_by_iters = sorted(list(by_iters.items()), key=lambda x: x[0])
     if len(sorted_by_iters) == 0:
         raise FileNotFoundError("no checkpoints available")
-    return sorted_by_iters[-1], is_done
+    return sorted_by_iters[-1][1], is_done
 
 def load_checkpoint(path : str):
     with open(path, 'rb') as f:
