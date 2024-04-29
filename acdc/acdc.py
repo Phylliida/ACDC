@@ -13,6 +13,8 @@ import os
 from tqdm.notebook import tqdm
 import datetime
 from pathlib import Path
+import PIL.Image
+import wandb
 
 def hook_was_added_by_hookpoint(hook):
     return "HookPoint." in str(repr(hook))
@@ -1068,9 +1070,32 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
                         metric=accuracy_metric,
                         num_edges=1,
                         constrain_to_answers=data.constrain_to_answers)[0].item()
+        score = get_baseline_score(edges)
+        acc = eval_acdc(
+                        model=wrap_run_with_hooks(model=model, fwd_hooks=hooks, **cfg.model_kwargs),
+                        data=data.data,
+                        last_token_position=data.last_token_position,
+                        correct=data.correct,
+                        incorrect=data.incorrect,
+                        metric=accuracy_metric,
+                        num_edges=1,
+                        constrain_to_answers=data.constrain_to_answers)[0].item()
         if cfg.log_level in INFO_LEVELS:
             print(f"valid score {valid_score} valid acc {valid_acc}")
             draw_graphviz_graph(cfg=cfg, edges=edges)
+        G = get_graphviz_graph(cfg=cfg, edges=edges)
+        img_path = get_ckpt_path(f"render {cfg.iter}.png")
+        G.render(img_path, format='png')
+        wandb.log(
+            {
+                "graph": wandb.Image(PIL.Image.open(img_path), caption='graph'),
+                "valid acc": valid_acc,
+                "valid metric": valid_score,
+                "metric": score,
+                "acc": acc,
+            },
+            step=cfg.iter,
+        )
         ckpt_path = get_ckpt_path(f"checkpoint {cfg.iter}.pkl")
         save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
         if cfg.log_level in INFO_LEVELS:
