@@ -222,7 +222,7 @@ class ACDCEvalData:
             self.unpatched = ACDCDataSubset(
                 data=self.data_all_batches[::2][self.batch_start:self.batch_end],
                 last_token_position=self.last_token_position_all_batches[::2][self.batch_start:self.batch_end],
-                logits=self.unpatched_logits,
+                logits=self.unpatched_logits[::2][self.batch_start:self.batch_end],
                 correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
                 incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
                 constrain_to_answers=self.constrain_to_answers,
@@ -319,7 +319,12 @@ class ACDCDataset:
     valid_incorrect: Float[torch.Tensor, "batch num_incorrect_answers"]
     constrain_to_answers: bool
 
-    def eval(self, model, batch_size, valid=False, metric=accuracy_metric):
+    @torch.no_grad()
+    def eval(self, model, batch_size, valid=False, metric=accuracy_metric, store_unpatched_logits=False, model_kwargs=None):
+        if model_kwargs is None:
+            model_kwargs = {}
+
+            
         if valid:
             data = self.valid_data
             last_token_position = self.valid_last_token_position
@@ -335,7 +340,24 @@ class ACDCDataset:
         n_data, ctx_len = data.size()
         for batch_start in range(0, n_data, batch_size):
             batch_end = min(n_data, batch_start+batch_size)
-            cur_batch_size = batch_end-batch_start
+            cur_batch_size = batch_end-batch_start    
+            unpatched_logits = None
+            if store_unpatched_logits:
+                if valid:
+                    unpatched_logits = get_logits_of_predicted_next_token(
+                            model=model,
+                            data=self.valid_data[batch_start:batch_end],
+                            last_token_position=self.valid_last_token_position[batch_start:batch_end],
+                            **model_kwargs
+                    )
+
+                else:
+                    unpatched_logits = get_logits_of_predicted_next_token(
+                            model=model,
+                            data=self.data[batch_start:batch_end],
+                            last_token_position=self.last_token_position[batch_start:batch_end],
+                            **model_kwargs
+                    )
             batch_scores = eval_acdc(model=model,
                     data=data[batch_start:batch_end],
                     last_token_position=last_token_position[batch_start:batch_end],
@@ -343,7 +365,8 @@ class ACDCDataset:
                     incorrect=incorrect[batch_start:batch_end],
                     metric=metric,
                     num_edges=cur_batch_size//2,
-                    constrain_to_answers=self.constrain_to_answers)
+                    constrain_to_answers=self.constrain_to_answers,
+                    unpatched_logits=unpatched_logits)
             scores.append(batch_scores)
         return torch.cat(scores, dim=0)
 
