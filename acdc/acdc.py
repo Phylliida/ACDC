@@ -9,6 +9,7 @@ from functools import partial
 from transformer_lens.hook_points import HookPoint
 import networkx as nx
 import graphviz
+import os
 from tqdm.notebook import tqdm
 import datetime
 from pathlib import Path
@@ -664,6 +665,26 @@ def get_currently_patched_edge_hooks(cfg: ACDCConfig, edges : List[Edge]):
             raise ValueError(f"Patching edge but not checked, what u doin, with edge {edge}")
     return currently_patched_edge_hooks
 
+def get_most_recent_checkpoint(checkpoint_dir: str):
+    '''
+    Given a checkpoint directory, returns
+    (most_recent_checkpoint_path, is_done)
+    where most_recent_checkpoint_path is the checkpoint path with highest number of iters
+    is_done is True if there is a checkpoint in this directory with "final"
+    '''
+    by_iters = {}
+    is_done = False
+    for f in os.listdir(checkpoint_dir):
+        # checkpoint 3.pkl or checkpoint 4 final.pkl
+        iters = f.split()[1]
+        iters = iters.replace(".pkl", "")
+        iters = int(iters)
+        if 'final' in f:
+            is_done = True
+        by_iters[iters] = os.path.join(checkpoint_dir, f)
+    sorted_by_iters = sorted(list(by_iters.items()), key=lambda x: x[0])
+    return sorted_by_iters[-1], is_done
+
 def load_checkpoint(path : str):
     with open(path, 'rb') as f:
         data = pickle.load(f)
@@ -1019,7 +1040,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     if cfg.log_level in INFO_LEVELS:
         print("final score", baseline_score)
     
-    ckpt_path = get_ckpt_path(f"checkpoint final.pkl")
+    ckpt_path = get_ckpt_path(f"checkpoint {iters} final.pkl")
     save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
     if cfg.log_level in INFO_LEVELS:
         print(f"saved to checkpoint {ckpt_path}")
