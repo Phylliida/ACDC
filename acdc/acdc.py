@@ -226,7 +226,7 @@ class ACDCEvalData:
                 # it also doesn't need batch index because each batch
                 # is a single copy of the data (ran with different edges),
                 # and unpatched will be the same for each copy so lets just reuse it
-                logits=self.unpatched_logits[self.batch_start:self.batch_end],
+                logits=self.unpatched_logits,
                 correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
                 incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
                 constrain_to_answers=self.constrain_to_answers,
