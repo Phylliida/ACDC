@@ -151,6 +151,7 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
     global good_nouns
     if not 'good_names' in globals() or good_names is None:
         names = restrict_to_most_common_size(tokenizer, NAMES, with_space=True, force_size=1)
+        names = sorted(list(names))
 
         # stuff like "chris" and "christine" get confused, ignore them
         no_prefix_names = []
@@ -172,7 +173,8 @@ def ioi_data_generator(tokenizer, num_patching_pairs, templates, patching_format
     for n in range(num_patching_pairs):
         template = random.choice(templates) 
         patching_format = random.choice(patching_formats)   
-        unique_tokens = set(re.sub(r"\s*", "", patching_format))
+        # sorted is important for determinism
+        unique_tokens = sorted(list(set(re.sub(r"\s*", "", patching_format))))
         random.shuffle(good_names)
         tok_map = {}
         for ind, tok in enumerate(unique_tokens):

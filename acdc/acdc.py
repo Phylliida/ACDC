@@ -304,6 +304,7 @@ class ACDCConfig:
     auto_hide_unused_default_edges: bool = True # edges with None for input and output hook will always be visible, this helps reduce clutter by hiding them if they have no path through them to output or through them to input
     merge_positions_in_graph_display: bool = True # if you have seperate edges 1,2,3,5,6 going from node A to node B, this will visually display them as a single edge labeled 1-3,5-6
     ckpt_directory: str = field(default_factory=lambda: f'ckpts/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
+    iter: int = 0
 
 
 @dataclass
@@ -814,7 +815,6 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
             edge.checked = True
             edge.patching = False
         
-    iters = 0
     while len(list(get_edges_to_check(edges=edges, nodes=all_nodes))) > 0:
     
         # get edges that are next to check (because they don't have any edges after them that haven't been checked)
@@ -846,10 +846,12 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
             edge_sets_to_process = [[edge] for edge in edges_to_check]
         edge_sets_to_patch = []
         edge_sets_to_keep = []
+        need_to_compute_baseline = True
         while len(edge_sets_to_process) > 0:
             
             print_stats(edges)
-            baseline_score = get_baseline_score(edges)
+            if need_to_compute_baseline:
+                baseline_score = get_baseline_score(edges)
             
             new_edge_sets_to_process = []
             # if we aren't trying to patch multiple at the same time, only process a single data point, store the rest for later
@@ -936,11 +938,26 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
                             print(f"splitting {len(edge_set)} edges into two edge sets, as they have score {score} which has diff {score_lost_by_edge_set} > {cfg.thresh}")
                         new_edge_sets_to_process.append(edge_set[:len(edge_set)//2])
                         new_edge_sets_to_process.append(edge_set[len(edge_set)//2:])
-    
+            # there's only one, we can simply patch it
+            if len(edge_sets_to_patch) == 1:
+                for i, (score, score_lost_by_edge_set, edge_set) in enumerate(edge_sets_to_patch):
+                    for edge in edge_set:
+                        edge.patching = True
+                        edge.checked = True
+                    if cfg.log_level in INFO_LEVELS:
+                        print(f"patching {len(edge_set)} edges with score {score} with diff of {score_lost_by_edge_set}")
+                    if cfg.log_level == LOG_LEVEL_DEBUG:
+                        for edge in edge_set:
+                            if cfg.log_level in INFO_LEVELS:
+                                print(f"    patching edge {edge}")
+                    need_to_compute_baseline = False
+                    baseline_score = score                    
             # rollback, sometimes even though individually they cause no problem, patching them at same time causes a problem
             # this looks to see if that happened, if so, we need to find the smallest set that patching together doesn't cause a problem
             # we just do a greedy thing and consider half, then a fourth, then eigth, etc.
-            if len(edge_sets_to_patch) > 0:
+                
+            elif len(edge_sets_to_patch) > 1:
+                need_to_compute_baseline = True
                 # if we rollback we keep the earlier ones patched, make them the most promising
                 edge_sets_to_patch.sort(key=lambda x: x[1])
                 
@@ -1002,7 +1019,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
                 edge.checked = True
 
         # prune edges that could not ever be on a path from input to output (because we have patched away all possible ways they could connect)
-        prune_edges(input_node=cfg.input_node, output_node=cfg.output_node, edges=edges)
+        modified = prune_edges(input_node=cfg.input_node, output_node=cfg.output_node, edges=edges)
         
         hooks = get_currently_patched_edge_hooks(cfg=cfg, edges=edges)
         valid_score = eval_acdc(
@@ -1027,11 +1044,11 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
         if cfg.log_level in INFO_LEVELS:
             print(f"valid score {valid_score} valid acc {valid_acc}")
             draw_graphviz_graph(cfg=cfg, edges=edges)
-        ckpt_path = get_ckpt_path(f"checkpoint {iters}.pkl")
+        ckpt_path = get_ckpt_path(f"checkpoint {cfg.iter}.pkl")
         save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
         if cfg.log_level in INFO_LEVELS:
             print(f"saved to checkpoint {ckpt_path}")
-        iters += 1
+        cfg.iter += 1
 
     if cfg.log_level in INFO_LEVELS:
         print("final output:")
@@ -1042,7 +1059,7 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     if cfg.log_level in INFO_LEVELS:
         print("final score", baseline_score)
     
-    ckpt_path = get_ckpt_path(f"checkpoint {iters} final.pkl")
+    ckpt_path = get_ckpt_path(f"checkpoint {cfg.iter} final.pkl")
     save_checkpoint(cfg=cfg, edges=edges, path=ckpt_path)
     if cfg.log_level in INFO_LEVELS:
         print(f"saved to checkpoint {ckpt_path}")

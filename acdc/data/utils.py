@@ -27,7 +27,8 @@ def restrict_to_most_common_size(tokenizer, words, with_space=False, force_size=
 
 def seed_random(seed):
     random.seed(seed)
-    torch.random.manual_seed(seed)  
+    torch.random.manual_seed(seed)
+    torch.cuda.random.manual_seed(seed)
     np.random.seed(seed)
 
 def repeat_swapped_patch(vec):
