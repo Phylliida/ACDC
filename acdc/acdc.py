@@ -222,7 +222,11 @@ class ACDCEvalData:
             self.unpatched = ACDCDataSubset(
                 data=self.data_all_batches[::2][self.batch_start:self.batch_end],
                 last_token_position=self.last_token_position_all_batches[::2][self.batch_start:self.batch_end],
-                logits=self.unpatched_logits[::2][self.batch_start:self.batch_end],
+                # unpatched already does [::2] when created
+                # it also doesn't need batch index because each batch
+                # is a single copy of the data (ran with different edges),
+                # and unpatched will be the same for each copy so lets just reuse it
+                logits=self.unpatched_logits[self.batch_start:self.batch_end],
                 correct=self.correct_all_batches[::2][self.batch_start:self.batch_end],
                 incorrect=self.incorrect_all_batches[::2][self.batch_start:self.batch_end],
                 constrain_to_answers=self.constrain_to_answers,
@@ -783,15 +787,15 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
     if cfg.store_unpatched_logits:
         unpatched_logits = get_logits_of_predicted_next_token(
                 model=model,
-                data=data.data,
-                last_token_position=data.last_token_position,
+                data=data.data[::2],
+                last_token_position=data.last_token_position[::2],
                 **cfg.model_kwargs
         )
 
         valid_unpatched_logits = get_logits_of_predicted_next_token(
                 model=model,
-                data=data.valid_data,
-                last_token_position=data.valid_last_token_position,
+                data=data.valid_data[::2],
+                last_token_position=data.valid_last_token_position[::2],
                 **cfg.model_kwargs
         )
         
