@@ -705,6 +705,7 @@ def get_most_recent_checkpoint(checkpoint_dir: str):
     by_iters = {}
     is_done = False
     for f in os.listdir(checkpoint_dir):
+        if not '.pkl' in f: continue
         # checkpoint 3.pkl or checkpoint 4 final.pkl
         iters = f.split()[1]
         iters = iters.replace(".pkl", "")
@@ -1084,11 +1085,11 @@ def run_acdc(model, cfg : ACDCConfig, data : ACDCDataset, edges : List[Edge]):
             print(f"valid score {valid_score} valid acc {valid_acc}")
             draw_graphviz_graph(cfg=cfg, edges=edges)
         G = get_graphviz_graph(cfg=cfg, edges=edges)
-        img_path = get_ckpt_path(f"render {cfg.iter}.png")
+        img_path = get_ckpt_path(f"render {cfg.iter}")
         G.render(img_path, format='png')
         wandb.log(
             {
-                "graph": wandb.Image(PIL.Image.open(img_path), caption='graph'),
+                "graph": wandb.Image(PIL.Image.open(img_path + ".png"), caption='graph'),
                 "valid acc": valid_acc,
                 "valid metric": valid_score,
                 "metric": score,
