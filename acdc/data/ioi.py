@@ -348,7 +348,7 @@ NAMES = ["Jacob",
 "Sara",
 "Owen",
 "Rebecca",
-"Jesus",
+#"Jesus", Jesus is too powerful
 "Michelle",
 "Landon",
 "Sofia",

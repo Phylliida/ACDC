@@ -624,6 +624,17 @@ def get_graphviz_graph(cfg : ACDCConfig, edges : List[Edge]) -> graphviz.Digraph
     displaying_nodes = set()
     default_edges = []
     num_edges = 0
+    
+    def top_5_digits(f):
+        return "{:.5f}".format(f)
+
+    def diff_to_str(diff):
+        if hasattr(diff, "item"):
+            diff = diff.item()
+        if type(diff) is str:
+            return diff
+        else:
+            return str(top_5_digits(diff))
     def add_edge(edge):
         if not edge.label is None and len(edge.label) > 0 and 'None' != edge.label: # the 'None' happens when positions = [None]
             try:
@@ -632,9 +643,9 @@ def get_graphviz_graph(cfg : ACDCConfig, edges : List[Edge]) -> graphviz.Digraph
                 if cfg.merge_positions_in_graph_display:
                     node_connections[(edge.input_node, edge.output_node)].append(val)
                 else:
-                    dot.edge(edge.input_node, edge.output_node, label=edge.label + str(edge.score_diff_when_patched))
+                    dot.edge(edge.input_node, edge.output_node, label=edge.label + diff_to_str(edge.score_diff_when_patched))
             except ValueError: # can't convert to int, just print the str
-                dot.edge(edge.input_node, edge.output_node, label=edge.label + str(edge.score_diff_when_patched))
+                dot.edge(edge.input_node, edge.output_node, label=edge.label + diff_to_str(edge.score_diff_when_patched))
         else:
             dot.edge(edge.input_node, edge.output_node)
     
